@@ -100,6 +100,7 @@ Signals, Functions, Member variables, etc."""
     signature: str
     name: str
     description: str
+    is_deprecated: str
 
     def __post_init__(self):
         _description, self.metadata = extract_metadata(self.description)
@@ -108,7 +109,16 @@ Signals, Functions, Member variables, etc."""
     def get_heading_as_string(self) -> str:
         """Returns an empty string. Virtual method to get a list of strings representing
 the element as a markdown heading."""
-        return self.name
+        is_deprecated_strike: str = ""
+        if self.is_deprecated:
+            is_deprecated_strike = "~~"
+
+        return "{}{}{}{}".format(
+            is_deprecated_strike,
+            self.name,
+            is_deprecated_strike,
+            " " + surround_with_html("(deprecated)", "small") if self.is_deprecated else ""
+        )
 
     def get_unique_attributes_as_markdown(self) -> List[str]:
         """Returns an empty list. Virtual method to get a list of strings describing the
@@ -117,7 +127,7 @@ unique attributes of this element."""
 
     @staticmethod
     def from_dict(data: dict) -> "Element":
-        return Element(data["signature"], data["name"], data["description"])
+        return Element(data["signature"], data["name"], data["description"], data["is_deprecated"])
 
 
 @dataclass
@@ -127,7 +137,11 @@ class Signal(Element):
     @staticmethod
     def from_dict(data: dict) -> "Signal":
         return Signal(
-            data["signature"], data["name"], data["description"], data["arguments"],
+            data["signature"],
+            data["name"],
+            data["description"],
+            "is_deprecated" in data and data["is_deprecated"],
+            data["arguments"],
         )
 
 
@@ -157,7 +171,8 @@ class Function(Element):
     def get_heading_as_string(self) -> str:
         """Returns an empty list. Virtual method to get a list of strings representing
 the element as a markdown heading."""
-        heading: str = self.name
+        heading: str = super().get_heading_as_string()
+
         if self.kind == FunctionTypes.VIRTUAL:
             heading += " " + surround_with_html("(virtual)", "small")
         if self.kind == FunctionTypes.STATIC:
@@ -176,6 +191,7 @@ the element as a markdown heading."""
             data["signature"],
             data["name"],
             data["description"],
+            "is_deprecated" in data and data["is_deprecated"],
             kind,
             data["return_type"],
             Function._get_arguments(data["arguments"]),
@@ -196,7 +212,11 @@ class Enumeration(Element):
     @staticmethod
     def from_dict(data: dict) -> "Enumeration":
         return Enumeration(
-            data["signature"], data["name"], data["description"], data["value"],
+            data["signature"],
+            data["name"],
+            data["description"],
+            "is_deprecated" in data and data["is_deprecated"],
+            data["value"],
         )
 
 
@@ -230,6 +250,7 @@ class Member(Element):
             data["signature"],
             data["name"],
             data["description"],
+            "is_deprecated" in data and data["is_deprecated"],
             data["data_type"],
             data["default_value"],
             data["export"],
